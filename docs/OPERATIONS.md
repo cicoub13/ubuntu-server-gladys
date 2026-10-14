@@ -42,8 +42,17 @@ The completion marker is `/var/lib/gladys-installer/completed`. The sibling `sta
 
 - Gladys data persists in `/var/lib/gladysassistant` and survives container updates and reboots.
 - Gladys follows the moving `v5` channel. Watchtower pulls compatible updates automatically and cleans replaced images. No manual action and no installer rebuild are needed for ordinary Gladys updates.
+- Watchtower only updates Gladys. It does not update itself, containers created by Gladys integrations, or containers you add. To let it update one of your own containers, give that container the label `com.centurylinklabs.watchtower.enable=true`.
+- Watchtower is pinned to an exact version, and installer releases never modify installed machines. To move to a newer Watchtower, edit its `image` line in `/opt/gladys/compose.yaml`, then run `sudo docker compose -f /opt/gladys/compose.yaml up -d watchtower`.
+- Container logs are rotated at 10 MB per file; the Docker default in `/etc/docker/daemon.json` keeps three files.
 - Ubuntu installs security updates through `unattended-upgrades`. Automatic reboot and Ubuntu release upgrades are disabled.
-- The appliance has no SSH server, no ordinary account, and a locked root. This is intentional: see [SECURITY.md](SECURITY.md).
+
+## Administrator access
+
+Use the administrator account created during installation, which belongs to `sudo`. Root stays locked: see [SECURITY.md](SECURITY.md).
+
+- Local console: tty1 shows the Gladys status, so press Alt+F2 for a login prompt. Alt+F1 returns to the status screen.
+- SSH: available only if OpenSSH was selected during installation, and only with public keys. To add a key later, log in on the local console and append it to `~/.ssh/authorized_keys`. To install OpenSSH afterwards, run `sudo apt install openssh-server`; password authentication stays disabled.
 
 ## Diagnostics
 

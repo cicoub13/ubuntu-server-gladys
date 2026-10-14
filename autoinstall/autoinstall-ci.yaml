@@ -12,6 +12,7 @@ autoinstall:
       name: direct
   ssh:
     install-server: false
+    allow-pw: false
   kernel-crash-dumps:
     enabled: false
   apt:

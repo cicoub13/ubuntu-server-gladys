@@ -1056,7 +1056,7 @@ class AutoinstallValidatorTests(unittest.TestCase):
             catalog = root / "catalog.yaml"
             production.write_text(
                 "autoinstall:\n  version: 1\n"
-                "  interactive-sections: [locale, keyboard, storage]\n",
+                "  interactive-sections: [locale, keyboard, storage, identity, ssh]\n",
                 encoding="utf-8",
             )
             ci.write_text(

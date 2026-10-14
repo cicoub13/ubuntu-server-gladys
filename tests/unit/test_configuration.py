@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 import unittest
 from pathlib import Path
@@ -19,18 +20,19 @@ def load_autoinstall(name: str) -> dict:
 
 
 class AutoinstallConfigurationTests(unittest.TestCase):
-    def test_production_prompts_for_language_keyboard_and_storage(self) -> None:
+    def test_production_prompts_for_language_keyboard_storage_and_admin(self) -> None:
         config = load_autoinstall("autoinstall.yaml")
 
         self.assertEqual(config["version"], 1)
         self.assertEqual(
-            config["interactive-sections"], ["locale", "keyboard", "storage"]
+            config["interactive-sections"],
+            ["locale", "keyboard", "storage", "identity", "ssh"],
         )
         self.assertEqual(config["locale"], "fr_FR.UTF-8")
         self.assertEqual(config["keyboard"], {"layout": "fr"})
         self.assertEqual(config["source"]["id"], "ubuntu-server-minimal")
         self.assertEqual(config["storage"]["layout"]["name"], "direct")
-        self.assertEqual(config["ssh"], {"install-server": False})
+        self.assertEqual(config["ssh"], {"install-server": False, "allow-pw": False})
         self.assertNotIn("identity", config)
         self.assertEqual(config["user-data"]["users"], [])
         self.assertTrue(config["user-data"]["disable_root"])
@@ -42,7 +44,7 @@ class AutoinstallConfigurationTests(unittest.TestCase):
 
         self.assertEqual(
             production.pop("interactive-sections"),
-            ["locale", "keyboard", "storage"],
+            ["locale", "keyboard", "storage", "identity", "ssh"],
         )
         self.assertEqual(ci.pop("interactive-sections"), [])
         self.assertEqual(ci, production)
@@ -76,8 +78,35 @@ class ComposeConfigurationTests(unittest.TestCase):
         self.assertEqual(gladys["network_mode"], "host")
         self.assertEqual(gladys["cgroup"], "host")
         self.assertIn("/var/lib/gladysassistant:/var/lib/gladysassistant", gladys["volumes"])
-        self.assertEqual(compose["services"]["watchtower"]["image"], "nickfedor/watchtower")
         self.assertIsNone(re.search(r"gladysassistant/gladys:v5\.\d", text))
+
+    def test_watchtower_is_pinned_and_updates_only_gladys(self) -> None:
+        compose = yaml.safe_load(
+            (ROOT / "payload" / "opt" / "gladys" / "compose.yaml").read_text(encoding="utf-8")
+        )
+        gladys = compose["services"]["gladys"]
+        watchtower = compose["services"]["watchtower"]
+
+        self.assertRegex(
+            watchtower["image"], r"^nickfedor/watchtower:\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$"
+        )
+        self.assertIn("--label-enable", watchtower["command"])
+        self.assertEqual(gladys["labels"], {"com.centurylinklabs.watchtower.enable": "true"})
+        self.assertNotIn("labels", watchtower)
+
+    def test_container_logs_are_rotated(self) -> None:
+        compose = yaml.safe_load(
+            (ROOT / "payload" / "opt" / "gladys" / "compose.yaml").read_text(encoding="utf-8")
+        )
+        for name, service in compose["services"].items():
+            with self.subTest(service=name):
+                self.assertEqual(service["logging"]["driver"], "json-file")
+                self.assertEqual(service["logging"]["options"]["max-size"], "10m")
+        daemon = json.loads(
+            (ROOT / "payload" / "etc" / "docker" / "daemon.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(daemon["log-driver"], "json-file")
+        self.assertEqual(daemon["log-opts"], {"max-size": "10m", "max-file": "3"})
 
 
 if __name__ == "__main__":

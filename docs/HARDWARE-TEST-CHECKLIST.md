@@ -54,7 +54,8 @@ Secure Boot is expected to remain compatible because the Ubuntu signed boot chai
 - [ ] Power interruption during image pull recovers.
 - [ ] Power interruption during application start recovers.
 - [ ] Recovery leaves exactly one Gladys container, one Watchtower container, one data directory, and one completion marker.
-- [ ] No SSH listener, ordinary default account, root password, or known password exists.
+- [ ] The administrator account created during installation logs in on tty2 and can use `sudo`; root stays locked and no other ordinary account exists.
+- [ ] Without OpenSSH selected, no SSH listener exists. With OpenSSH selected and a key imported, key login works and password login is refused.
 - [ ] `gladys-diagnostics` output is useful and contains no database, token, password, environment secret, or full inspection data.
 
 ## Usability

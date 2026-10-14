@@ -24,10 +24,11 @@ The Ubuntu shim, GRUB EFI binaries, kernel, initrd, EFI partition, and media int
 
 ## Installed appliance
 
-Subiquity installs a normal Ubuntu Server target from the minimized source. Production media present the locale, keyboard, and storage screens in the normal installer order, with French locale and French AZERTY keyboard preselected; the CI Autoinstall document differs only in that interactivity. The result is deliberately spartan:
+Subiquity installs a normal Ubuntu Server target from the minimized source. Production media present the locale, keyboard, storage, identity, and SSH screens in the normal installer order, with French locale and French AZERTY keyboard preselected and OpenSSH unselected. The CI Autoinstall document differs only in that interactivity, so CI media create no account. The result is deliberately spartan:
 
-- Timezone is UTC and the hostname is `gladys`.
-- Root is locked, no ordinary user account is created, and OpenSSH Server is not installed.
+- Timezone is UTC and the hostname is `gladys`; the Autoinstall `user-data` overrides the server name typed on the identity screen.
+- Root is locked. The only account is the administrator created on the identity screen, which Subiquity adds to `sudo`.
+- OpenSSH Server is installed only when the user selects it. Autoinstall `user-data` forces `ssh_pwauth: false` over the SSH screen choice, so SSH accepts public keys only.
 - Only security updates are enabled; automatic reboot and release upgrades are disabled.
 
 Autoinstall late commands verify the payload SHA256 before extraction, extract it into the target with numeric ownership, enforce root ownership and explicit permissions, install the version file, enable the three Gladys systemd units, and mask the tty1 getty so the status console owns that terminal.
@@ -84,13 +85,13 @@ Gladys must be running and answering HTTP before Watchtower is pulled and starte
 
 ## Container and update boundaries
 
-The production Compose contract runs `gladysassistant/gladys:v5` privileged, with host networking, host cgroup access, the Docker socket, `/dev`, read-only udev events, and persistent application data at `/var/lib/gladysassistant`. These broad privileges are confined to Gladys because its hardware integration architecture requires them; the consequence for the threat model is spelled out in [SECURITY.md](SECURITY.md). Watchtower uses the Docker socket only to update the moving Gladys channel and to clean replaced images.
+The production Compose contract runs `gladysassistant/gladys:v5` privileged, with host networking, host cgroup access, the Docker socket, `/dev`, read-only udev events, and persistent application data at `/var/lib/gladysassistant`. These broad privileges are confined to Gladys because its hardware integration architecture requires them; the consequence for the threat model is spelled out in [SECURITY.md](SECURITY.md). Watchtower is pinned to an exact release and image digest and runs with `--label-enable`, so it only updates containers labelled `com.centurylinklabs.watchtower.enable=true`: in the Compose contract, that is Gladys alone. It does not update itself, containers created by Gladys integrations, or containers the administrator adds. Container logs are size-capped both in the Compose contract and through the Docker daemon default in `/etc/docker/daemon.json`.
 
 Ubuntu security updates are a separate boundary managed by `unattended-upgrades`. Automatic reboot and Ubuntu release upgrades are disabled. Rebuilding this installer updates installer logic or the authenticated Ubuntu base; it is never required for ordinary Gladys v5 updates.
 
 ## Discovery and user interfaces
 
-During provisioning, the tty1 console publishes the current IPv4 address of the setup page. Once Gladys is ready, Gladys itself advertises `gladysassistant.local` through its integrated mDNS support; the installer does not run a second mDNS daemon. The console keeps showing the LAN IPv4 addresses as a fallback, so neither a graphical stack nor a maintenance login is ever required.
+During provisioning, the tty1 console publishes the current IPv4 address of the setup page. Once Gladys is ready, Gladys itself advertises `gladysassistant.local` through its integrated mDNS support; the installer does not run a second mDNS daemon. The console keeps showing the LAN IPv4 addresses as a fallback, so neither a graphical stack nor a maintenance login is required for normal use.
 
 The selected Subiquity locale is read from `/etc/default/locale`. A shared, embedded catalogue translates the browser setup page into every language offered by the pinned Subiquity 26.04 language list, with an explicit English fallback for malformed or unknown locale values. tty1 uses the selected translation for scripts the Linux virtual console can render; Arabic, Hebrew, Tibetan, Japanese, and Chinese fall back to readable English copy there because the kernel console cannot provide the required shaping, bidirectional layout, or glyph coverage.
 

@@ -2,7 +2,7 @@
 
 A bootable installer that turns an amd64 mini-PC into a dedicated [Gladys Assistant](https://gladysassistant.com) home automation appliance.
 
-The installer is a remastered Ubuntu Server 26.04 LTS image. You flash it to a USB drive, boot the target machine, choose and confirm the internal disk to erase, and connect Ethernet. After the automated installation reboots, the machine installs Docker from Ubuntu packages, pulls the current `gladysassistant/gladys:v5` image, and starts Gladys together with Watchtower. Gladys then advertises its own address at `http://gladysassistant.local`.
+The installer is a remastered Ubuntu Server 26.04 LTS image. You flash it to a USB drive, boot the target machine, choose and confirm the internal disk to erase, create the administrator account, and connect Ethernet. After the automated installation reboots, the machine installs Docker from Ubuntu packages, pulls the current `gladysassistant/gladys:v5` image, and starts Gladys together with Watchtower. Gladys then advertises its own address at `http://gladysassistant.local`.
 
 ## At a glance
 
@@ -11,10 +11,10 @@ The installer is a remastered Ubuntu Server 26.04 LTS image. You flash it to a U
 | Base system | Ubuntu Server 26.04 LTS amd64, latest point release, authenticated against Canonical signatures on every build |
 | Target hardware | UEFI amd64 mini-PCs with an internal SSD or NVMe and wired Ethernet |
 | Application | `gladysassistant/gladys:v5`, pulled on first boot, never embedded in the ISO |
-| Application updates | Watchtower follows the moving `v5` channel and cleans replaced images |
+| Application updates | A pinned Watchtower release follows the moving `v5` channel, updates only the Gladys container, and cleans replaced images |
 | System updates | `unattended-upgrades`, security updates only, no automatic reboot, no release upgrade |
 | Data | Persistent Gladys data lives in `/var/lib/gladysassistant` |
-| Remote access | None. No SSH server, no default account, root locked, no known password |
+| Administration | One sudo account created by the user during installation. OpenSSH optional, off by default, keys only. Root locked, no account or password embedded in the ISO |
 
 ## What this is, and what it is not
 
@@ -30,9 +30,11 @@ The ISO never embeds a numbered Gladys release, a container image, a known passw
 4. Boot the target machine in UEFI mode. GRUB shows **Install Gladys Assistant** and starts it automatically after a visible three second timeout.
 5. Choose the installation language and keyboard layout. French and French AZERTY are preselected.
 6. Select the intended internal SSD or NVMe and explicitly confirm its erasure. Production media never select or erase a disk unattended.
-7. Let the installation finish, remove the USB drive, and leave Ethernet connected.
-8. Follow the progress on the tty1 console or on the setup web page. Before Gladys starts, the console shows the IPv4 address of the setup page.
-9. Wait for the console to show **Ready**, then open `http://gladysassistant.local`. The displayed IPv4 address remains the fallback when the client network does not support mDNS.
+7. Create the administrator account: name, username, and password. The server name field is ignored; the appliance is always named `gladys`.
+8. Optionally install OpenSSH and import your public keys from GitHub or Launchpad. SSH password login is always disabled, so without an imported key SSH is only usable once a key has been added from the local console.
+9. Let the installation finish, remove the USB drive, and leave Ethernet connected.
+10. Follow the progress on the tty1 console or on the setup web page. Before Gladys starts, the console shows the IPv4 address of the setup page.
+11. Wait for the console to show **Ready**, then open `http://gladysassistant.local`. The displayed IPv4 address remains the fallback when the client network does not support mDNS.
 
 Provisioning requires Internet access over Ethernet. The Ubuntu installation itself can finish offline; first boot then waits safely in the `WAIT_NETWORK` phase and resumes automatically as soon as connectivity appears. Version 1 has no Wi-Fi setup UI.
 

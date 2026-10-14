@@ -19,7 +19,7 @@ class ConfigurationError(ValueError):
 
 
 CANONICAL_VALIDATOR_SOURCE_ID = "synthesized"
-PRODUCTION_INTERACTIVE_SECTIONS = ["locale", "keyboard", "storage"]
+PRODUCTION_INTERACTIVE_SECTIONS = ["locale", "keyboard", "storage", "identity", "ssh"]
 
 
 def _load(path: Path) -> dict:
@@ -37,7 +37,7 @@ def _load(path: Path) -> dict:
 def _safety_checks(config: dict) -> None:
     if config.get("interactive-sections") != PRODUCTION_INTERACTIVE_SECTIONS:
         raise ConfigurationError(
-            "production must make locale, keyboard, and storage interactive"
+            "production must make locale, keyboard, storage, identity, and ssh interactive"
         )
     if config.get("locale") != "fr_FR.UTF-8":
         raise ConfigurationError("production locale default must be French")
@@ -49,11 +49,15 @@ def _safety_checks(config: dict) -> None:
         raise ConfigurationError("production storage layout must be direct")
     if "identity" in config:
         raise ConfigurationError("production must not create a known identity")
-    if config.get("ssh") != {"install-server": False}:
-        raise ConfigurationError("SSH server must remain disabled")
+    if config.get("ssh") != {"install-server": False, "allow-pw": False}:
+        raise ConfigurationError(
+            "SSH server must default to disabled with password authentication off"
+        )
     user_data = config.get("user-data", {})
     if user_data.get("users") != [] or user_data.get("disable_root") is not True:
-        raise ConfigurationError("production must contain no ordinary user and must lock root")
+        raise ConfigurationError(
+            "production must predefine no ordinary user and must lock root"
+        )
     if user_data.get("ssh_pwauth") is not False:
         raise ConfigurationError("SSH password authentication must be disabled")
     commands = config.get("late-commands", [])
@@ -127,7 +131,7 @@ def validate_repository_configs(
         != PRODUCTION_INTERACTIVE_SECTIONS
     ):
         raise ConfigurationError(
-            "production interactive sections must contain locale, keyboard, and storage"
+            "production interactive sections must contain locale, keyboard, storage, identity, and ssh"
         )
     if ci_comparable.pop("interactive-sections", None) != []:
         raise ConfigurationError("CI interactive sections must be empty")

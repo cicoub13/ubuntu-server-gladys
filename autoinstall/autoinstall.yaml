@@ -4,6 +4,8 @@ autoinstall:
     - locale
     - keyboard
     - storage
+    - identity
+    - ssh
   locale: fr_FR.UTF-8
   keyboard:
     layout: fr
@@ -15,6 +17,7 @@ autoinstall:
       name: direct
   ssh:
     install-server: false
+    allow-pw: false
   kernel-crash-dumps:
     enabled: false
   apt:
